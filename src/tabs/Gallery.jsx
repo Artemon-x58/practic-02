@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 
 import * as ImageService from 'service/image-service';
-import { Button, SearchForm, Grid, GridItem, Text, CardItem } from 'components';
+import {
+  Button,
+  SearchForm,
+  Grid,
+  GridItem,
+  Text,
+  CardItem,
+  Loader,
+  Modal,
+} from 'components';
 
 export const Gallery = () => {
   const [query, setQuery] = useState('');
@@ -10,8 +19,13 @@ export const Gallery = () => {
   const [isEmpty, setIsEmpty] = useState(false);
   const [isLoadMore, setIsLoadMore] = useState(false);
   const [isError, setIsError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [modalSrc, setModalSrc] = useState('');
+  const [modalAlt, setModalAlt] = useState('');
+
   useEffect(() => {
     if (!query) return;
+    setIsLoading(true);
     ImageService.getImages(query, page)
       .then(({ photos, total_results }) => {
         if (!total_results) {
@@ -21,7 +35,8 @@ export const Gallery = () => {
         setIsLoadMore(page < Math.ceil(total_results / 15));
         setPhotos(prevState => [...prevState, ...photos]);
       })
-      .catch(error => setIsError(error.messege));
+      .catch(error => setIsError(error.messege))
+      .finally(() => setIsLoading(false));
   }, [query, page]);
 
   const onSubmit = newQuery => {
@@ -36,6 +51,12 @@ export const Gallery = () => {
   const handleLoadMore = () => {
     setPage(prevState => prevState + 1);
   };
+
+  const openModal = ({ src, alt }) => {
+    setModalSrc(src);
+    setModalAlt(alt);
+  };
+
   return (
     <>
       <SearchForm onSubmit={onSubmit} />
@@ -43,7 +64,13 @@ export const Gallery = () => {
         {photos.map(photo => (
           <GridItem key={photo.id}>
             <CardItem color={photo.avg_color}>
-              <img src={photo.src.large} alt={photo.alt} />
+              <img
+                src={photo.src.large}
+                alt={photo.alt}
+                onClick={() => {
+                  openModal({ src: photo.src.large, alt: photo.alt });
+                }}
+              />
             </CardItem>
           </GridItem>
         ))}
@@ -54,6 +81,10 @@ export const Gallery = () => {
         <Text textAlign="center">Sorry. There are no images ... 😭</Text>
       )}
       {isError && <Text textAlign="center">Sorry. {isError}</Text>}
+      {isLoading && <Loader />}
+      {modalSrc && (
+        <Modal src={modalSrc} alt={modalAlt} closeModal={openModal} />
+      )}
     </>
   );
 };
