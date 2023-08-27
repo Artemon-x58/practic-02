@@ -8,21 +8,33 @@ export const Gallery = () => {
   const [page, setPage] = useState(1);
   const [photos, setPhotos] = useState([]);
   const [isEmpty, setIsEmpty] = useState(false);
-
+  const [isLoadMore, setIsLoadMore] = useState(false);
+  const [isError, setIsError] = useState('');
   useEffect(() => {
     if (!query) return;
-    ImageService.getImages(query, page).then(({ photos, total_results }) => {
-      if (!total_results) {
-        setIsEmpty(true);
-        return;
-      }
-      setPhotos(prevState => [...prevState, ...photos]);
-    });
+    ImageService.getImages(query, page)
+      .then(({ photos, total_results }) => {
+        if (!total_results) {
+          setIsEmpty(true);
+          return;
+        }
+        setIsLoadMore(page < Math.ceil(total_results / 15));
+        setPhotos(prevState => [...prevState, ...photos]);
+      })
+      .catch(error => setIsError(error.messege));
   }, [query, page]);
 
   const onSubmit = newQuery => {
     setQuery(newQuery);
-    console.log(newQuery);
+    setPage(1);
+    setPhotos([]);
+    setIsEmpty(false);
+    setIsLoadMore(false);
+    setIsError('');
+  };
+
+  const handleLoadMore = () => {
+    setPage(prevState => prevState + 1);
   };
   return (
     <>
@@ -36,9 +48,12 @@ export const Gallery = () => {
           </GridItem>
         ))}
       </Grid>
+      {isLoadMore && <Button onClick={handleLoadMore}>Load More</Button>}
+
       {isEmpty && (
         <Text textAlign="center">Sorry. There are no images ... 😭</Text>
       )}
+      {isError && <Text textAlign="center">Sorry. {isError}</Text>}
     </>
   );
 };
